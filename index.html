@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head class="html5">
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title>Open Parliament Video: Indexation, Alignment & Analysis</title>
+
+		<meta name="description" content="">
+
+	    <link rel="icon" type="image/png" href="favicon.png" />
+		
+		<link rel="stylesheet" href="client/css/bootstrap4.min.css">
+		<link rel="stylesheet" href="client/css/fontawesome-all.css">
+		<link rel="stylesheet" href="client/css/style.css">
+		
+		<script type="text/javascript" src="client/js/jquery-2.2.1.min.js"></script>
+		<script type="text/javascript" src="client/js/bootstrap4.min.js"></script>
+		<script type="text/javascript" src="client/js/jquery.form.min.js"></script>
+
+		<script type="text/javascript" src="client/js/main.js"></script>
+
+		<!--
+			[if lt IE 9]>
+			<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+			<![endif]
+		-->
+		
+	</head>
+	<body>
+		
+		<div class="container">
+			<div class="row">
+				<div class="col-12">
+					<h3 style="margin-top: 20px;">Open Parliament Video: Indexation, Alignment & Analysis</h3>
+				</div>
+			</div>
+			<ul class="nav nav-tabs">
+				<li class="nav-item"><a class="nav-link active show" data-toggle="tab" href="#inputContainer"><b>Input</b></a></li>
+				<li class="nav-item"><a class="nav-link" data-toggle="tab" href="#outputContainer"><b>Output</b></a></li>
+			</ul>
+			<div class="tab-content container">
+				<div id="inputContainer" class="tab-pane fade show active">
+					<div class="container">
+						<div class="row">
+							<div class="col-12">
+								<form id="uploadProtocol" method="post">
+									<h5>Upload Plenary Protocol</h5>
+									<div class="bg-warning">*.xml files from <a href="https://www.bundestag.de/service/opendata" target="_blank">bundestag.de/service/opendata</a></div>
+									<div class="custom-file">
+										<input type="file" name="protokoll[]" id="uploadProtocolInputFile" class="custom-file-input" accept=".xml" multiple>
+										<label class="custom-file-label text-truncate" for="uploadProtocolInputFile">Choose file</label>
+									</div>
+									<div class="mb-2 mt-2">
+										<input disabled id="startUpload" type="submit" class="btn btn-outline-primary btn-sm" value="Upload">
+									</div>
+
+								</form>
+							</div>
+						</div>
+						<hr>
+						<div class="row">
+							<div class="col-12">
+								<h5>Queue</h5>
+								<ul id="queueContainer" class="list-group">
+									<li class="list-group-item">Queue is empty</li>
+								</ul>
+								<div class="mb-2 mt-2">
+									<button id="startQueue" class="btn btn-outline-primary btn-sm">Process Queue</button>
+									<button id="updateQueue" class="btn btn-outline-primary btn-sm"><i class='fas fa-sync'></i></button>
+								</div>
+							</div>
+						</div>
+						<hr>
+						<div class="row">
+							<div class="col-12">
+								<button id="errorsOnly" class="btn btn-outline-danger btn-sm">Show only Errors</button>
+								<h5>Status <span id="speechStatus"></span></h5>
+								<div id="status"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div id="outputContainer" class="tab-pane fade">
+					<div class="container">
+						<div class="row">
+							<div class="col-12">
+								<h5>Already processed speeches</h5>
+								<div class="bg-warning">
+									<ul style="padding-left: 20px; margin-bottom: 0;">
+										<li>The stenographic transcripts are not identical with the spoken word. Additionally the videos may contain long (silent) electoral processes or Q&A sessions which are hard to automatically detect and synchronize (see also <a href="https://REPOSITORY#known-issues" target="_blank">https://REPOSITORY#known-issues</a>).</li>
+										<li>Agenda items which contain oath taking ("Eidesleistung"), Q&A sessions ("Befragung der Bundesregierung", "Fragestunde") and elections ("Wahl der/des") are currently ignored.</li>
+									</ul>
+								</div>
+								<div id="fileContents"></div>
+							</div>
+						</div>
+						<hr>
+						<div class="row">
+							<div class="col-12">
+								<h5>Preview</h5>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-12 col-sm-7">
+								<div id="video"></div>
+							</div>
+							<div class="col-12 col-sm-5">
+								<div id="transcript">
+									<div class="customhtmlContainer"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+		</div>
+
+	</body>
+</html>
