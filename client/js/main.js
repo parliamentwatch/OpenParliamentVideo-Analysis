@@ -322,12 +322,16 @@ function forceAlignXML() {
 							//autoProcessNextItem();
 						}
 
-						if ((result.task != 'speechStatus') && ((result.task != 'download') || (result.task == 'download' && result.progress == 100 && result.status == 'success'))) {
+						if ((result.task != 'speechStatus') && (result.task != 'console') && ((result.task != 'download') || (result.task == 'download' && result.progress == 100 && result.status == 'success') || (result.task == 'download' && result.status == 'error'))) {
 							$('#status')[0].innerHTML += '<div class="'+ result.status +'">'+ result.message +'</div>';
 							if (!isStatusMouseOver) {
 								$('#status')[0].scrollTop = $('#status')[0].scrollHeight;
 							}
 						}
+
+						if (result.task == 'console') {
+							console.log(result.console);
+						}						
 
 						if (result.task == 'speechStatus') {
 							$('#speechStatus').html('<span class="'+result.status+'">'+ result.message +'</span>');
@@ -352,16 +356,17 @@ function forceAlignXML() {
 						}
 						
 						if (result.task == 'download') {
-							$('#status .progressContainer.download').last().children('.progressIndicator').width(result.progress + '%');
-							if (result.progress == 100) {
+							if (result.status == 'error') {
+								$('#status .progressContainer.download').last().children('.progressIndicator').addClass('error');
+							} else if (result.progress == 100) {
 								$('#status .progressContainer.download').last().children('.progressIndicator').addClass('success');
-								//$('.glyphicon#audioOK').addClass('active');
 							}
+							$('#status .progressContainer.download').last().children('.progressIndicator').width(result.progress + '%');
+							
 						} else if (result.task == 'forcealign') {
 							$('#status .progressContainer.forcealign').last().children('.progressIndicator').width(result.progress + '%');
 							if (result.progress == 100) {
 								$('#status .progressContainer.forcealign').last().children('.progressIndicator').addClass('success');
-								//$('.glyphicon#forceAlignOK').addClass('active');
 							}
 							if (result.status == 'error') {
 								$('#status .progressContainer.forcealign').last().children('.progressIndicator').addClass('error');

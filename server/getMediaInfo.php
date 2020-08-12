@@ -23,11 +23,17 @@ function getMediaIDs($XML,$sleep=1) {
 
 		$wahlperiode = $xmlData->xpath('//kopfdaten//wahlperiode')[0];
 		$sitzungsnummer = $xmlData->xpath('//kopfdaten//sitzungsnr')[0];
+		$sessionDate = date_create_from_format('d.m.Y', $xmlData->xpath('//kopfdaten//datum')[0]["date"])->getTimestamp();
+		$docNumber = sprintf('%02d',(int) $wahlperiode).sprintf('%03d',(int) $sitzungsnummer);
+
+		$media_index = json_decode(file_get_contents($conf["dir"]["output"]."/index-files/".$docNumber."-data_index.json"),true);
 
 		$alleTOPs = $xmlData->xpath('//tagesordnungspunkt');
 		
 		$index_media_json = [];
 		$return = [];
+
+		//$prevSpeechID = findPrevSpeechID($media_index, $sitzungsnummer);
 
 
 		//$lastNameTag = $xmlData->xpath('//tagesordnungspunkt//name[last()]');
@@ -87,7 +93,12 @@ function getMediaIDs($XML,$sleep=1) {
 					$topArr[] = (string)$topArrItem;
 				}
 
+				$tryAlignment = true;
 				if ($topString[0] && preg_match("/(Eidesleistung )|(Befragung der Bundesregierung)|(Befr agung der Bundesregierung)|(Fragestunde)|(Wahl der )|(Wahl des )/", $topString[0])) {
+					
+					// doesn't make sense in this context -> fix
+					$tryAlignment = false;
+
 					continue;
 				}
 
@@ -103,25 +114,37 @@ function getMediaIDs($XML,$sleep=1) {
 
 						$vorname = $rede->xpath('p//redner//vorname')[0];
 						$nachname = $rede->xpath('p//redner//nachname')[0];
+
 						$titel = '';
+						$fraktion = '';
+						$speakerRole = '';
 
 						if (!empty($rede->xpath('p//redner//titel'))) {
 							$titel = $rede->xpath('p//redner//titel')[0];
 						}
 
-						$response = array(  'message' => "Indexing: Period ".$wahlperiode." | Session: ". $sitzungsnummer." | Agenda Item ".$topCnt."/".count($alleTOPs)." | Speech ".$speechCnt."/".count($alleReden)." ( ".$vorname." ".$nachname." )",
+						if (!empty($rede->xpath('p//redner//fraktion'))) {
+							$fraktion = $rede->xpath('p//redner//fraktion')[0];
+						}
+
+						if (!empty($rede->xpath('p//redner//rolle//rolle_lang'))) {
+							$speakerRole = $rede->xpath('p//redner//rolle//rolle_lang')[0];
+						}
+
+						$speakerID = (string)$rede->xpath('p//redner')[0]["id"];
+
+						$response = array(  'message' => "Indexing: Period ".$wahlperiode." | Session: ". $sitzungsnummer." | Agenda Item ".$topCnt."/".count($alleTOPs)." | Speech ".$speechCnt."/".count($alleReden)." ( ".$vorname." ".$nachname." ".$speakerID." ), ".gmdate("Y-m-d", $sessionDate),
 							'task' => 'speechStatus',
 							'status' => '',
 							'progress' => 0);
 						echo json_encode($response);
 
-						$rednerID = (string)$rede->xpath("p//redner")[0]["id"];
-						//print_r($rednerID);
-						//$alleRednerReden = $tagesordnungspunkt->xpath("/redner[@id='".$rednerID."']");
+						//print_r($speakerID);
+						//$alleRednerReden = $tagesordnungspunkt->xpath("/redner[@id='".$speakerID."']");
 						
 						unset($alleRednerReden);
-						$alleRednerReden = $tagesordnungspunkt->xpath("rede//p[1]//redner[@id='".$rednerID."']");
-						//$alleRednerReden = $xmlData->xpath("//tagesordnungspunkt/rede//p//redner[@id='".$rednerID."'][1]");
+						$alleRednerReden = $tagesordnungspunkt->xpath("rede//p[1]//redner[@id='".$speakerID."']");
+						//$alleRednerReden = $xmlData->xpath("//tagesordnungspunkt/rede//p//redner[@id='".$speakerID."'][1]");
 						//print_r($alleRednerReden);
 
 						$rCnt = 0;
@@ -145,16 +168,43 @@ function getMediaIDs($XML,$sleep=1) {
 						
 
 //return;
-						//if (!isset($rede['media-id'])) {
-						if (true) {
 
-							$rssContent = getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachname, $titel, $sleep, $redeIndex);
-							$mediaID = $rssContent["mediaID"];
-							$headline = $rssContent["headline"];
+						if (!isset($rede['media-id'])) {
+
+							$speechInIndex = $media_index[(string) $rede['id']];
+							// Request Media ID from Bundestag
+							if (!isset($speechInIndex['mediaID']) || strlen((string) $speechInIndex['mediaID']) < 3 || !isset($speechInIndex['timestamp']) || $speechInIndex['agendaItemSecondTitle'] == null) {
+								
+								sleep($sleep);
+								
+								$rssContent = getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachname, $titel, $sleep, $redeIndex);
+								$mediaID = $rssContent["mediaID"];
+
+								$headlineInfo = extractInfoFromHeadline($rssContent["headline"]);
+								$headline = $headlineInfo["agendaItemTitle"];
+								if ((!isset($top) || strlen($top) == 0) && isset($headlineInfo["agendaItem"])) {
+									$top = "Tagesordnungspunkt ".$headlineInfo["agendaItem"];
+								}
+
+								$speechTimestamp = $rssContent["timestamp"];
+
+								
+							} else {
+								// Else use Media ID from Index 
+								$mediaID = $speechInIndex['mediaID'];
+
+								$headlineInfo = extractInfoFromHeadline($speechInIndex['agendaItemSecondTitle']);
+								$headline = $headlineInfo["agendaItemTitle"];
+								if ((!isset($top) || strlen($top) == 0) && isset($headlineInfo["agendaItem"])) {
+									$top = "Tagesordnungspunkt ".$headlineInfo["agendaItem"];
+								}
+
+								$speechTimestamp = $speechInIndex["timestamp"];
+							}
+
+							
 
 							// Doublecheck via TOC if no media ID could be found
-							sleep($sleep);
-							
 							if (!$mediaID) {
 								$xrefItems = $xmlData->xpath('//ivz-eintrag//xref');
 								
@@ -179,7 +229,14 @@ function getMediaIDs($XML,$sleep=1) {
 
 											$rssContent = getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $correctTOPString, $vorname, $nachname, $titel,$sleep, $redeIndex);
 											$mediaID = $rssContent["mediaID"];
-											$headline = $rssContent["headline"];
+
+											$headlineInfo = extractInfoFromHeadline($rssContent["headline"]);
+											$headline = $headlineInfo["agendaItemTitle"];
+											if ((!isset($top) || strlen($top) == 0) && isset($headlineInfo["agendaItem"])) {
+												$top = "Tagesordnungspunkt ".$headlineInfo["agendaItem"];
+											}
+
+											$speechTimestamp = $rssContent["timestamp"];
 										}
 										break;
 									}
@@ -224,11 +281,9 @@ function getMediaIDs($XML,$sleep=1) {
 						}
 
 
-						forceAlignXMLData($rede->asXML(),$xmlData);
+						forceAlignXMLData($rede->asXML(),$xmlData, $tryAlignment);
 
-
-
-
+						
 						unset($tmpObj);
 
 						$tmpDS = [];
@@ -241,22 +296,60 @@ function getMediaIDs($XML,$sleep=1) {
 						$currMediaID = ((string)$mediaID) ? (string)$mediaID : (string)$rede['media-id'];
 						$duration = getAudioDuration($conf["dir"]["cacheaudio"].'/'.$currMediaID.'_mp3_128kb_stereo_de_128.mp3');
 
+						if ($duration == null) {
+							$tryAlignment = false;
+						}
+
+						$tmpObj["id"] = (string)$rede["id"];
 						$tmpObj["mediaID"] = $currMediaID;
 						$tmpObj["duration"] = $duration;
-						$tmpObj["id"] = (string)$rede["id"];
-						//$tmpObj["vorname"] = (string)$vorname;
-						//$tmpObj["nachname"] = (string)$nachname;
-						$tmpObj["rednerID"] = (string)$rede->p->redner["id"];
-						$tmpObj["wahlperiode"] = (string)$wahlperiode;
-						$tmpObj["sitzungsnummer"] = (string)$sitzungsnummer;
-						$tmpObj["date"] = (string)$xmlData->xpath('//kopfdaten//datum')[0]["date"];
-						$tmpObj["ds"] = $tmpDS;
-						$tmpObj["top"] = (string)$top;
-						$tmpObj["toptitle"] = $topArr;
-						$tmpObj["headline"] = $headline;
+						$tmpObj["aligned"] = $tryAlignment;
+						$tmpObj["electoralPeriod"] = (string)$wahlperiode;
+						$tmpObj["sessionNumber"] = (int)$sitzungsnummer;
+						$tmpObj["date"] = gmdate("Y-m-d", $sessionDate);
+						$tmpObj["timestamp"] = $speechTimestamp;
+						$tmpObj["agendaItemTitle"] = (string)$top;
+						$tmpObj["agendaItemSecondTitle"] = $headline;
+						$tmpObj["agendaItemThirdTitle"] = $topArr;
+						$tmpObj["documents"] = $tmpDS;
+						$tmpObj["speakerID"] = $speakerID;
+						$tmpObj["speakerDegree"] = (string)$titel;
+						$tmpObj["speakerFirstName"] = (string)$vorname;
+						$tmpObj["speakerLastName"] = (string)$nachname;
+						//TODO: map fraction to party if possible
+						$tmpObj["speakerParty"] = (string)$fraktion;
+						$tmpObj["speakerRole"] = (string)$speakerRole;
+
+						/*
+						$tmpObj["prevSpeechID"] = $prevSpeechID;
+						$tmpObj["nextSpeechID"] = "last";						
+						if ($prevSpeechID != "first") {
+							$index_media_json[$prevSpeechID]["nextSpeechID"] = $tmpObj["id"];
+						}
+						$prevSpeechID = (string)$rede["id"];
+						*/
+
+						$html = file_get_contents($conf["dir"]["output"]."/".sprintf('%02d',(int) $wahlperiode)."/".sprintf('%03d',(int) $sitzungsnummer)."/".$docNumber."-Rede-".$tmpObj["id"].".html");
+		
+						if ($html) {
+
+							$dom = new DOMDocument('1.0', 'UTF-8');
+							$dom->loadHTML($html);
+							$xPath = new DOMXPath($dom);
+							$speechNode = $xPath->query("//div[@class='rede']")[0];
+
+							$innerHTML = "";
+							$children  = $speechNode->childNodes;
+
+							foreach ($children as $child) { 
+								$innerHTML .= $speechNode->ownerDocument->saveHTML($child);
+							}
+
+							$tmpObj["content"] = htmlspecialchars($innerHTML);
+
+						}
 
 						$index_media_json[$tmpObj["id"]] = $tmpObj;
-						
 
 					}
 
@@ -269,6 +362,7 @@ function getMediaIDs($XML,$sleep=1) {
 						'progress' => 0);
 					echo json_encode($response);
 					*/
+					
 
 				}
 
@@ -322,18 +416,38 @@ function getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachn
 
 	sleep($sleep);
 
+	/*
+	$response = array(  'message' => 'see console',
+		'task' => 'console',
+		'status' => '',
+		'console' => 'VORNAME: '.$vorname.', NACHNAME: '.$nachname.'');
+	echo json_encode($response);
+	*/
+
 	// Fix Namen
+	if ($nachname == 'Bürgermeister') {
+		$vornameParts = explode(' ', $vorname, 2);
+		$vorname = $vornameParts[0];
+		$nachname = $vornameParts[1];
+	}
+	$vorname = str_replace(',', '', $vorname);
+	$nachname = str_replace(',', '', $nachname);
 	$vorname = str_replace('Alterspräsident ', '', $vorname);
 	$vorname = str_replace('Alterspraesident ', '', $vorname);
 	$vorname = str_replace('Altersprasident ', '', $vorname);
 	$vorname = str_replace('Dr. ', '', $vorname);
 	$vorname = str_replace('Graf ', '', $vorname);
 	$vorname = str_replace(' Graf', '', $vorname);
-	$nachname = str_replace('der ', '', $nachname);
+	$nachname = str_replace('Graf ', '', $nachname);
+	preg_match('/(in der)/', $nachname, $surnameMatch);
+	if (strlen($surnameMatch[0]) == 0) {
+		$nachname = str_replace('der ', '', $nachname);
+	}
 	$vorname = str_replace(' Freiherr von', '', $vorname);
 	$nachname = str_replace('Freiherr von', '', $nachname);
 	$nachname = str_replace('von ', '', $nachname);
 	$nachname = str_replace('de Vries', 'Vries', $nachname);
+	$nachname = str_replace('de Maizière', 'Maizière', $nachname);
 
 	$nachnameParts = explode(' ', $nachname);
 	if (count($nachnameParts) == 2 
@@ -350,11 +464,13 @@ function getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachn
 		$nachname = $vornameParts[1].' '.$nachname;
 		$vorname = $vornameParts[0];
 	}
+
 	preg_match('/(in der)/', $vorname, $match);
 	if (strlen($match[0]) != 0) {
 		$vorname = str_replace($match[0], '', $vorname);
 		$nachname = $match[0].' '.$nachname;
 	}
+
 	if ($vorname == 'Matern' && $nachname == 'Marschall') {
 		//$vorname = 'Matern von';
 		$vorname = '';
@@ -362,15 +478,25 @@ function getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachn
 	if ($vorname == 'Norbert Maria' && $nachname == 'Altenkamp') {
 		$vorname = 'Norbert';
 	}
+	if ($vorname == 'Berengar Elsner von' || $vorname == 'Berengar Elsner') {
+		$vorname = 'Berengar';
+		$nachname = 'Elsner von Gronow';
+	}
+	if ($vorname == 'Albert H.' && $nachname == 'Weiler') {
+		$vorname = 'Albert';
+	}
 	// Fix Ende
 
 	$top = str_replace('   ', ' ', $top);
 
-	$topShortID = getTopShortID($top);
-	if (preg_match("/(Epl)/", $topShortID)) {
-		$searchString = $topShortID;
+	$topShortIDs = getTopShortID($top);
+	$searchStrings = [];
+	if (preg_match("/(Epl)/", $topShortIDs[0])) {
+		$searchStrings[0] = $topShortIDs[0];
+		$searchStrings[1] = ($topShortIDs[1]) ? $topShortIDs[1] : null;
 	} else {
-		$searchString = 'TOP: '.$topShortID;
+		$searchStrings[0] = 'TOP: '.$topShortIDs[0];
+		$searchStrings[1] = ($topShortIDs[1]) ? 'TOP: '.$topShortIDs[1] : null;
 	}
 
 	$nachnameClean = urlencode(convertAccentsAndSpecialToNormal($nachname));
@@ -378,7 +504,7 @@ function getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachn
 
 	$rssURL = 'http://webtv.bundestag.de/player/bttv/news.rss?lastName='.$nachnameClean.'&firstName='.$vornameClean.'&meetingNumber='.urlencode($sitzungsnummer).'&period='.urlencode($wahlperiode);
 
-	$response = array(  'message' => 'Retrieving Media ID from '.$rssURL.', Index: '.$redeIndex.', Search String: '.$searchString,
+	$response = array(  'message' => 'Retrieving Media ID from '.$rssURL.', Index: '.$redeIndex.', Search String: '.$searchStrings[0],
 		'task' => 'getmediainfo',
 		'status' => '',
 		'progress' => 0);
@@ -386,6 +512,14 @@ function getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachn
 
 	$rssResult = simplexml_load_file($rssURL);
 	
+	if (!$rssResult) {
+		$response = array(  'message' => 'Error: Media ID could not be received from URL (HTTP ERROR).',
+			'task' => 'getmediainfo',
+			'status' => 'error',
+			'progress' => 0);
+		echo json_encode($response);
+		return null;
+	}
 
 	$allItems = $rssResult->xpath('//item');
 	
@@ -400,11 +534,22 @@ function getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachn
 			$description = $item->description[0];
 			$description = str_replace('  ', ' ', $description);
 			
-			if (preg_match("/(".$searchString.")/", $description)) {
+			$matchingString = null;
+			
+			if (preg_match("/(".$searchStrings[0].")/", $description)) {
+				$matchingString = $searchStrings[0];
+			} elseif ($searchStrings[1] != null && preg_match("/(".$searchStrings[1].")/", $description)) {
+				$matchingString = $searchStrings[1];
+			} elseif (preg_match("/(".$topShortIDs[0].")/", $description)) {
+				$matchingString = $topShortIDs[0];
+			}
+
+			if ($matchingString) {
 				$link = $item->link;
 				$tmp = explode('/', $link);
-				$tmpArr = preg_split("/".$searchString."\:\s/",$description);
+				$tmpArr = preg_split("/".$matchingString."\:\s/",$description);
 				$tmpHeadline[] = array_pop($tmpArr);
+				$tmpTimestamp[] = strtotime($item->pubDate[0]);
 				$mediaID = array_pop($tmp);
 
 				array_push($tmpMatches,$mediaID);
@@ -413,7 +558,7 @@ function getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachn
 		}
 		//print_r($tmpMatches);
 
-		return array("mediaID"=>$tmpMatches[(($redeIndex)?$redeIndex:0)],"headline"=>$tmpHeadline[(($redeIndex)?$redeIndex:0)]);
+		return array("mediaID"=>$tmpMatches[(($redeIndex)?$redeIndex:0)],"headline"=>$tmpHeadline[(($redeIndex)?$redeIndex:0)],"timestamp"=>$tmpTimestamp[(($redeIndex)?$redeIndex:0)]);
 
 	} elseif (count($allItems) == 1 && strlen($top) > 1) {
 
@@ -421,12 +566,31 @@ function getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachn
 		$description = str_replace('  ', ' ', $description);
 		$link = $allItems[0]->link;
 		
-		if (preg_match("/(".$searchString.")/", $description)) {
+		$matchingString = null;
+		
+		if (preg_match("/(".$searchStrings[0].")/", $description)) {
+			$matchingString = $searchStrings[0];
+		} elseif ($searchStrings[1] != null && preg_match("/(".$searchStrings[1].")/", $description)) {
+			$matchingString = $searchStrings[1];
+		} elseif (preg_match("/(".$topShortIDs[0].")/", $description)) {
+			$matchingString = $topShortIDs[0];
+		}
+
+		/*
+		$response = array(  'message' => 'Matching Search String: '.$matchingString.', ShortID: '.$topShortIDs[0],
+			'task' => 'getmediainfo',
+			'status' => '',
+			'progress' => 0);
+		echo json_encode($response);
+		*/
+
+		if ($matchingString) {
 			$tmp = explode('/', $link);
 			$mediaID = array_pop($tmp);
-			$tmpArr = preg_split("/".$searchString."\:\s/",$description);
+			$tmpArr = preg_split("/".$matchingString."\:\s/",$description);
 			$tmpHeadline = array_pop($tmpArr);
-			return array("mediaID"=>$mediaID,"headline"=>$tmpHeadline);
+			$tmpTimestamp = strtotime($allItems[0]->pubDate[0]);
+			return array("mediaID"=>$mediaID,"headline"=>$tmpHeadline,"timestamp"=>$tmpTimestamp);
 		}
 
 	}
@@ -441,6 +605,7 @@ function getMediaIDfromRSS($wahlperiode, $sitzungsnummer, $top, $vorname, $nachn
  */
 function getTopShortID($top) {
 	
+	$return = [];
 	$topParts = explode(' ', $top);
 
 	if (preg_match('/^I\./', $top)) {
@@ -448,27 +613,88 @@ function getTopShortID($top) {
 	}
 
 	$topType = $topParts[0];
-	$topID = $topParts[1];
+	$topID1 = $topParts[1];
 
-	if (preg_match('/-/', $topID)) {
-		$topIDArray = explode('-', $topID);
+	if (preg_match('/-/', $topID1)) {
+		$topID2 = $topID1;
+		$topIDArray = explode('-', $topID1);
 		$topIDStart = (int) $topIDArray[0];
 		$topIDEnd = (int) $topIDArray[1];
 
-		$count = $topIDStart;
-		$topID = $topIDArray[0];
-		for($i=$topIDStart+1; $i<$topIDEnd; $i++) {
-			$topID .= ','.$i;
+		$topID1 = $topIDArray[0];
+		for($i=$topIDStart+1; $i<=$topIDEnd; $i++) {
+			$topID1 .= ','.$i;
 		}
 	}
 
-	if ($topType == 'Zusatzpunkt') {
-		return 'ZP '.$topID;
+	if ($topType == 'Zusatzpunkt' || $topType == 'Zusatztagesordnungspunkt') {
+		$return[] = 'ZP '.$topID1;
+		if (isset($topID2)) {
+			$return[] = 'ZP '.$topID2;
+		}
 	} else if ($topType == 'Einzelplan') {
-		return 'Epl '.$topID;
+		$return[] = 'Epl '.$topID1;
+		if (isset($topID2)) {
+			$return[] = 'Epl '.$topID2;
+		}
 	} else {
-		return ''.$topID;
+		$return[] = ''.$topID1;
+		if (isset($topID2)) {
+			$return[] = ''.$topID2;
+		}
 	}
+	
+	return $return;
+}
+
+/**
+ * @param $headline
+ * @return array
+ */
+function extractInfoFromHeadline($headline) {
+	
+	$re = '/((?<sessionNumber>\d+)\.\sSitzung)|(TOP:\s(?<agendaItem>\w+\s\d+,\s\d+,\s\d+|\w+\s\d+,\s\d+|\w+\s\d+|\w+\.\d+|\d\.\d|\d))|(?<subAgendaItem>Epl\s\d{2}|Epl\s\d{1}|ZP\s\d\s-\sZP\s\d|ZP\s\d)|(?<agendaItemTitle>:\s.+)/m';
+	
+	preg_match_all($re, $headline, $matches, 0);
+
+	/*
+	echo '<pre>';
+	print_r($matches);
+	echo '</pre>';
+	*/
+
+	$sessionNumber = (isset($matches["sessionNumber"][0])) ? $matches["sessionNumber"][0] : null;
+	$agendaItem = (isset($matches["agendaItem"])) ? $matches["agendaItem"][1] : null;
+	$subAgendaItem = (isset($matches["subAgendaItem"])) ? $matches["subAgendaItem"][2] : null;
+	$agendaItemTitle = (isset($matches["agendaItemTitle"][3])) ? ltrim($matches["agendaItemTitle"][3], ": ") : ltrim($matches["agendaItemTitle"][2], ": ");
+
+	if (!$agendaItemTitle || strlen($agendaItemTitle) < 3) {
+		$agendaItemTitle = $headline;
+	}
+
+	return array("sessionNumber"=>$sessionNumber, 
+		"agendaItem"=>$agendaItem, 
+		"subAgendaItem"=>$subAgendaItem, 
+		"agendaItemTitle"=>$agendaItemTitle);
+}
+
+function findPrevSpeechID($media_index, $currentSessionNumber) {
+	
+	$currentSessionNumber = (int)$currentSessionNumber;
+
+	$targetSessionNumber = ($currentSessionNumber > 1) ? $currentSessionNumber-1 : 1; 
+
+	$previousSpeech = "first";
+
+	foreach ($media_index as $speechID => $speechData) {
+		if ($media_index[$speechID]["sitzungsnummer"] == (string)$targetSessionNumber &&
+			$media_index[$speechID]["nextSpeechID"] == 'last') {
+			$previousSpeech = $speechID;
+			break;
+		}
+	}
+
+	return $previousSpeech;
 }
 
 /*

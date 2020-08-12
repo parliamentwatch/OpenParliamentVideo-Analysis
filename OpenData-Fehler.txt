@@ -6,9 +6,15 @@ WP 19, 1. Sitzung, Rede: Alterspräsident Dr. Hermann Otto Solms (ID19100200)
 
 WP 19, 4. Sitzung, Rede: Niels Annen (ID19401700)
 - ist im Sitzungsverlauf TOP 2 zugeordnet, tatsächlich und nach Inhaltsverzeichnis wäre TOP 3 korrekt.
+--> keine technischen Auswirkungen
+
+WP 19, 8. Sitzung, ZP 4-7
+- Tagesordnungspunkt ist mit "Zusatzpunkt 4-7" angegeben, "Zusatzpunkt 7" existiert jedoch separat
+--> MANUELL KORRIGIERT auf "4-6"
 
 WP 19, 16. Sitzung, TOP 2
 - Sonderzeichen Fehler (kann nicht nach Unicode UTF-8 dekodiert werden)
+--> MANUELL KORRIGIERT
 
 WP 19, 18. Sitzung, Reden: Gerald Ullrich, Stefan Rouenhoff, Bernd Westphal, Hansjörg Müller, Klaus Ernst, Heribert Hirte, Katharina Dröge, Fabio De Masi, Heribert Hirte, Markus Töns 
 - sind im Sitzungsverlauf TOP 14 zugeordnet, tatsächlich und nach Inhaltsverzeichnis wäre TOP 15 korrekt.
@@ -21,6 +27,78 @@ WP 19, 25. Sitzung, Rede: Norbert Röttgen / Katja Keul (ID192507100)
 WP 19, 43. Sitzung, Rede: Helin Evrim Sommer (ID194309000)
 - Meldung zur Geschäftsordnung von Helin Evrim Sommer ist als separate Rede aufgeführt, welche in der Mediathek nicht abrufbar ist
 
+WP 19, 52. Sitzung, Rede: Wolfgang Kubicki (ID195205700)
+- Video konnte nicht von der Mediathek abgerufen werden (> 10 Ergebnisse)
+
+WP 19, 56. Sitzung, Rede: Jürgen Braun (ID195609400)
+- Meldung zur Geschäftsordnung von Jürgen Braun ist als separate Rede aufgeführt, welche in der Mediathek nicht abrufbar ist
+
+WP 19, 60. Sitzung, Rede: Carsten Sieling (ID196001500)
+- Name ist falsch notiert und kann deshalb in der Mediathek nicht gefunden werden:
+<vorname>Carsten Sieling,</vorname><nachname>Bürgermeister</nachname><fraktion>Bremen</fraktion>
+--> wird automatisiert behoben
+
+WP 19, 65. Sitzung, Rede: Stephan Harbarth (ID196503400)
+- Annahme der Wahl ist als separate Rede aufgeführt, welche in der Mediathek nicht abrufbar ist
+
+WP 19, 68. Sitzung, Rede: Ulrich Kelber (ID196806300)
+- Annahme der Wahl ist als separate Rede aufgeführt, welche in der Mediathek nicht abrufbar ist
+
+WP 19, 68. Sitzung, Rede: Jens Maier (ID196809000)
+- Erklärung zur Aussprache ist als separate Rede aufgeführt, welche in der Mediathek nicht abrufbar ist
+
+WP 19, 69. Sitzung, Rede: Albert Weiler (ID196904600)
+- Rede Node der Kurzintervention enthält keinen Vor- und Nachnamen 
+(<redner id="11004439"><name><titel>Dr. h. c.</titel><fraktion>CDU/CSU</fraktion></name></redner>)
+--> MANUELL KORRIGIERT (Vor- und Nachname Nodes im gesamten Protokoll ergänzt)
+
+WP 19, 71. Sitzung, Rede: Wolfgang Kubicki (ID197108000)
+- Video konnte nicht von der Mediathek abgerufen werden (> 10 Ergebnisse)
+
+WP 19, 104. Sitzung, Rede: Roland Hartwig (ID1910412200)
+- Meldung zur Geschäftsordnung von Roland Hartwig ist als separate Rede aufgeführt, welche in der Mediathek nicht abrufbar ist
+
+WP 19, 106. Sitzung, Rede: Wolfgang Wiehle (ID1910610300)
+- Die Aufzeichnung der Rede ist in der Mediathek nicht einzeln auffindbar (sie ist jedoch Bestandteil der Aufzeichnung des gesamten TOP ZP 2)
+
+WP 19, 107. Sitzung, Rede: Jürgen Braun (ID1910716700)
+- Meldung zur Geschäftsordnung von Jürgen Braun ist als separate Rede aufgeführt, welche in der Mediathek nicht abrufbar ist
+
+WP 19, 111. Sitzung (allgemein)
+- Die TOP Nodes im Sitzungsverlauf enthalten keine Informationen zum TOP (<tagesordnungspunkt top-id="">)
+- Zusätzlich fehlen im Inhaltsverzeichnis wichtige strukturelle Elemente (<ivz-block>, <ivz-block-titel>), welche eine automatisierte Behebung des Problems ermöglichen würden
+ --> Inhaltsverzeichnis-Struktur MANUELL KORRIGIERT
+
+WP 19, 115. Sitzung, Rede: Petra Pau (ID1911516700)
+- Video konnte nicht von der Mediathek abgerufen werden (> 10 Ergebnisse)
+
+WP 19, 124. Sitzung, Rede: Matthias Hauer (ID1912401500)
+- Videoaufzeichnung wurde aus der Mediathek entfernt (Zusammenbruch des Redners)
+
+WP 19, 124. Sitzung, Reden: Götz Frömming (ID1912415800) und Norbert Kleinwächter (ID1912415900)
+- Meldungen zur Geschäftsordnung von Götz Frömming und Norbert Kleinwächter sind als separate Rede aufgeführt, welche in der Mediathek nicht abrufbar sind
+
+WP 19, 147. Sitzung, Rede: Michael Espendiller (ID1914705400)
+- In der Mediathek existiert keine MP3 Datei der Rede 
+--> MP3 manuell aus MP4 Datei erstellt (nur in lokalem Archiv verfügbar)
+
+WP 19, 150. Sitzung, TOP 14/15: (Aktuelle Stunde: Verhältnis der Partei Die Linke zur  freiheitlich-demokratischen Grundordnung der Bundesrepublik Deutschland)
+- TOP ist im Plenarprotokoll (http://dipbt.bundestag.de/dip21/btp/19/19150.pdf) als "Zusatzpunkt 15" aufgeführt, in der Mediathek als "Zusatzpunkt 14"
+--> MANUELL KORRIGIERT (ZP 15 ersetzt durch ZP 14, da Mediathek für die Identifikation der Reden ausschlaggebend)
+
+WP 19, 158. Sitzung, TOP: Zusatzpunkt 21, Rede: Eva Högl (ID1915806700)
+- Annahme der Wahl ist im Protokoll als separate Rede gekennzeichnet, welche in der Mediathek nicht vorliegt
+
+WP 19, 160. Sitzung, Rede: Doris Barnett (ID1916012500)
+- In der Mediathek existiert keine MP3 Datei der Rede 
+--> MP3 manuell aus MP4 Datei erstellt (nur in lokalem Archiv verfügbar)
+
+WP 19, 163. Sitzung, Rede: Albert H. Weiler (ID1916304800)
+- Video konnte nicht von der Mediathek abgerufen werden
+
+
+___________________________________________________________
+
 Inkonsistenzen:
 
 WP 19, 22. Sitzung, TOP 3
@@ -32,6 +110,8 @@ WP 19, 23. Sitzung, TOP 3
 WP 19, 24. Sitzung, TOP 3
 - wird im Inhaltsverzeichnis als ein TOP mit Unterpunkten aufgeführt, im Sitzungsverlauf mehrfach identisch mit top-id="Tagesordnungspunkt 3" referenziert, in der Mediathek mit Nummerierung 3.11, 3.12, 3.13, 3.14, 3.15.
 
+___________________________________________________________
+
 Allgemein (in Bezug auf die Videoaufzeichnungen): 
 
 - Die letzten Redebeiträge (<rede>) eines Tagesordnungpunktes enden oftmals nicht am Ende der Rede, sondern beinhalten auch noch den weiteren Text des Bundestagspräsidenten (welcher nicht in den Videoaufzeichnungen enthalten ist).
@@ -39,6 +119,8 @@ Allgemein (in Bezug auf die Videoaufzeichnungen):
 - In der Open Data XML Struktur sind alle Redebeiträge als "<rede>" notiert. Hier wäre eine Unterscheidung zwischen tatsächlichen Reden, Fragen (Fragestunde, Befragung der Bundesregierung), Zwischenfragen und Kurzinterventionen hilfreich (auch wenn sich dies z.T. aus dem Kontext ergibt und ggf. automatisiert erkannt werden kann).
 - Die Namensbezeichnung der MdBs folgt keiner einheitlichen Logik. Dies macht es sehr umständlich zwischen Protokoll und Mediathek ergänzende Informationen abzurufen (z.T. wird dies bereits in den Skripten behoben: https://github.com/OpenHypervideo/VideoTranscriptGenerator/blob/master/_server/scrapeMediaIDs.php#L262).
 - Auch die Bezeichnung von Tagesordnungspunkten und Zusatzpunkten variiert zwischen Mediathek und XML Protokollen (Beispiel: "ZP 4-6"-> "ZP 4,5,6"). Auch dies wird bereits teilweise behoben (siehe https://github.com/OpenHypervideo/VideoTranscriptGenerator/blob/master/_server/scrapeMediaIDs.php#L401), erschwert jedoch nach wie vor die Identifikation des korrekten Videobeitrags in der Mediathek (ausgehend vom XML Protokoll).
+
+___________________________________________________________
 
 Allgemein (in Bezug auf die Text & Video Synchronisation)
 - Insb. Wahlvorgänge enthalten oftmals im Video zusätzlichen gesprochenen Text, welcher aber nicht zu Protokoll gegeben wird (siehe bspw. 19. Sitzung, TOP 1 Wahl der Bundeskanzlerin: "(Namensaufruf und Wahl)"). Dies erschwert die Synchronisation bzw. macht z.T. manuelle Korrekturen notwendig.

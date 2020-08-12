@@ -11,21 +11,27 @@ ob_end_flush();
 
 
 /**
- * @param $XMLFilePath
- * @param $xPathSelector
+ * @param $XMLRede
+ * @param $XMLAll
+ * @param $tryAlignment 
  * @return mixed
  */
-function forceAlignXMLData($XMLRede, $XMLAll, $sleep=1) {
+function forceAlignXMLData($XMLRede, $XMLAll, $tryAlignment, $sleep=1) {
 
 	global $conf;
-
-
-
-	sleep($sleep);
 
 	$xmlDataRede = simplexml_load_string($XMLRede);
 	$xmlDataAll = $XMLAll;
 
+	/*
+	$console = $xmlDataRede->asXML();
+	$response = array(  'message' => 'see console',
+		'task' => 'console',
+		'status' => '',
+		'console' => $console,
+		'progress' => 0);
+	echo json_encode($response);
+	*/
 
 	$wahlperiode = sprintf('%02d',(int) $xmlDataAll->xpath('//kopfdaten//wahlperiode')[0]);
 	$sitzungsnummer = sprintf('%03d',(int) $xmlDataAll->xpath('//kopfdaten//sitzungsnr')[0]);
@@ -72,6 +78,12 @@ function forceAlignXMLData($XMLRede, $XMLAll, $sleep=1) {
 
 				//echo "P!--> ".$paragraph."<br>";
 
+				//clean up paragraph splits
+				$paragraph[0] = str_replace('– ,', '–,', $paragraph[0]);
+				if (substr($paragraph[0], 0, 1) === '-') {
+					$paragraph[0] = substr($paragraph[0], 1, strlen($paragraph[0]));
+				}
+
 				$sentences = preg_split('/([.,:;?!\\-\\-\\–] +)/', $paragraph[0], -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 
 				$paragraph[0] = '';
@@ -80,6 +92,8 @@ function forceAlignXMLData($XMLRede, $XMLAll, $sleep=1) {
 				$lastChild = null;
 
 				foreach ( $sentences as $sentence ) {
+
+					$sentence = convert_to_UTF8($sentence);
 
 					if ( $count%2 && $lastChild ) {
 						$lastChild[0] .= $sentence;
@@ -99,8 +113,16 @@ function forceAlignXMLData($XMLRede, $XMLAll, $sleep=1) {
 
 		}
 
+		ini_set('mbstring.substitute_character', 32);
+		$cleanXML = encode_utf8($xmlDataRede->asXML());
+		//$cleanXML = mb_convert_encoding($xmlDataRede->asXML(), 'UTF-8', 'UFT-8');
+  		if (mb_detect_encoding($cleanXML) == 'ISO-8859-1') {
+  			$cleanXML = mb_convert_encoding($cleanXML, 'UTF-8', 'ISO-8859-1');
+  		}
+
+  		$cleanXML = str_replace('encoding="ISO-8859-1"', 'encoding="UTF-8"', $cleanXML);
+
 		//$cleanXML = convertAccentsAndSpecialToNormal();
-		$cleanXML = mb_convert_encoding($xmlDataRede->asXML(), 'UTF-8', 'UFT-8');
 		file_put_contents($conf["dir"]["tmp"]."/".$outputFilePath.'_optimised.xml', $cleanXML);
 
 
@@ -118,6 +140,8 @@ function forceAlignXMLData($XMLRede, $XMLAll, $sleep=1) {
 					'progress' => 0);
 				echo json_encode($response);
 
+				sleep($sleep);
+
 				getAudioFile($audioFilePath);
 			} else {
 				/*
@@ -129,7 +153,7 @@ function forceAlignXMLData($XMLRede, $XMLAll, $sleep=1) {
 				*/
 			}
 
-			if (!file_exists($currentOutputDir.'/'.$outputFilePath.'_timings.json')) {
+			if (!file_exists($currentOutputDir.'/'.$outputFilePath.'_timings.json') && $tryAlignment === true) {
 				$response = array(  'message' => 'Force aligning '.$audioFileName.' with '.$outputFilePath.'_optimised.xml ...',
 					'task' => 'startForceAlign',
 					'status' => '',
@@ -143,10 +167,14 @@ function forceAlignXMLData($XMLRede, $XMLAll, $sleep=1) {
 						'progress' => 0);
 					echo json_encode($response);
 				} else {
+					
+					sleep($sleep);
+
 					forceAlignAudio($conf["dir"]["cacheaudio"].'/'.$audioFileName, $conf["dir"]["tmp"]."/".$outputFilePath.'_optimised.xml', $currentOutputDir."/".$outputFilePath.'_timings.json');
 				}
 
 			} else {
+				
 				/*
 				$response = array(  'message' => 'JSON timings file found ('.$currentOutputDir.'/'.$outputFilePath.'_timings.json). Force Align not necessary.',
 					'task' => 'forcealign',
@@ -154,33 +182,43 @@ function forceAlignXMLData($XMLRede, $XMLAll, $sleep=1) {
 					'progress' => 100);
 				echo json_encode($response);
 				*/
+				
 
 			}
 
-			$xmlDataWithTimingsRAW = getXMLWithTimings($currentOutputDir.'/'.$outputFilePath.'_timings.json', $xmlDataRede->asXML());
+			if (file_exists($currentOutputDir.'/'.$outputFilePath.'_timings.json')) {
+				$xmlDataWithTimingsRAW = getXMLWithTimings($currentOutputDir.'/'.$outputFilePath.'_timings.json', $xmlDataRede->asXML());
 
-			$simpleXMLWithTimings = new SimpleXMLElement($xmlDataWithTimingsRAW["xml"]);
-			$selectedXMLPart = $simpleXMLWithTimings;
-			$htmlString = getHTMLfromXML($selectedXMLPart->asXML());
+				$simpleXMLWithTimings = new SimpleXMLElement($xmlDataWithTimingsRAW["xml"]);
+				$selectedXMLPart = $simpleXMLWithTimings;
+				$htmlString = getHTMLfromXML($selectedXMLPart->asXML());
 
-			file_put_contents($currentOutputDir."/".$outputFilePath.'.html', $htmlString);
+				file_put_contents($currentOutputDir."/".$outputFilePath.'.html', $htmlString);
 
-			file_put_contents($currentOutputDir."/".$outputFilePath.'_annotations.json', json_encode($xmlDataWithTimingsRAW["annotations"], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+				file_put_contents($currentOutputDir."/".$outputFilePath.'_annotations.json', json_encode($xmlDataWithTimingsRAW["annotations"], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-			$subtitles = getSubtitles(json_decode(file_get_contents($currentOutputDir.'/'.$outputFilePath.'_timings.json'),true));
+				$subtitles = getSubtitles(json_decode(file_get_contents($currentOutputDir.'/'.$outputFilePath.'_timings.json'),true));
 
-			file_put_contents($currentOutputDir.'/'.$outputFilePath.'.srt',$subtitles["srt"]);
-			file_put_contents($currentOutputDir.'/'.$outputFilePath.'.vtt',$subtitles["vtt"]);
+				file_put_contents($currentOutputDir.'/'.$outputFilePath.'.srt',$subtitles["srt"]);
+				file_put_contents($currentOutputDir.'/'.$outputFilePath.'.vtt',$subtitles["vtt"]);
 
-			/*
-			$response = array(  'message' => 'HTML with timings saved to: '.$outputFilePath.'.html',
-				'task' => '',
-				'status' => '',
-				'progress' => 0);
-			echo json_encode($response);
-			*/
+				/*
+				$response = array(  'message' => 'HTML with timings saved to: '.$outputFilePath.'.html',
+					'task' => '',
+					'status' => '',
+					'progress' => 0);
+				echo json_encode($response);
+				*/
 
-			unlink($conf["dir"]["tmp"]."/".$outputFilePath.'_optimised.xml');
+				unlink($conf["dir"]["tmp"]."/".$outputFilePath.'_optimised.xml');
+			} else if ($tryAlignment === false) {
+
+				$htmlString = getHTMLfromXML($xmlDataRede->asXML());
+
+				file_put_contents($currentOutputDir."/".$outputFilePath.'.html', $htmlString);
+				unlink($conf["dir"]["tmp"]."/".$outputFilePath.'_optimised.xml');
+
+			}
 
 			sleep($sleep);
 
@@ -231,15 +269,21 @@ function getAudioFile($audioFilePath) {
 	$filePathArray = preg_split("/\\//", $audioFilePath);
 	$audioFileName = array_pop($filePathArray);
 
-	if ($status == 200) {
+	if (!$output || $status != 200) {
+		$response = array(  'message' => 'Error: Audio file could not be downloaded (HTTP Error '.$status.').',
+			'task' => 'download',
+			'status' => 'error',
+			'progress' => 10);
+		echo json_encode($response);
+	} else {
 		file_put_contents($conf["dir"]["cacheaudio"]."/".$audioFileName, $output);
-	}
 
-	$response = array(  'message' => 'Audio file successfully downloaded.',
-		'task' => 'download',
-		'status' => 'success',
-		'progress' => 100);
-	echo json_encode($response);
+		$response = array(  'message' => 'Audio file successfully downloaded.',
+			'task' => 'download',
+			'status' => 'success',
+			'progress' => 100);
+		echo json_encode($response);
+	}
 
 }
 
@@ -346,7 +390,6 @@ function forceAlignAudio($audioFilePath, $optimisedXMLFilePath, $outputFilePath,
 		echo json_encode($response);
 
 		sleep($sleep);
-		exit();
 	}
 
 }
@@ -672,6 +715,8 @@ function getHTMLfromXML($XMLDataWithTimings) {
 	$xmlStr = array(
 		'<?xml version="1.0" encoding="UTF-8"?>
 ',
+		'<?xml version="1.0" encoding="ISO-8859-1"?>
+',
 		'<?xml version="1.0"?>
 ',
 		'<!DOCTYPE dbtplenarprotokoll SYSTEM "dbtplenarprotokoll.dtd">',
@@ -687,14 +732,9 @@ function getHTMLfromXML($XMLDataWithTimings) {
 		'</rede>'
 	);
 	$htmlStr = array(
-		'<!DOCTYPE html>
-<html>
-  <body>
-',
-		'<!DOCTYPE html>
-<html>
-  <body>
-',
+		'',
+		'',
+		'',
 		'',
 		'body',
 		'<div class="sitzungsverlauf">',
@@ -709,6 +749,7 @@ function getHTMLfromXML($XMLDataWithTimings) {
 	);
 
 	$htmlString = str_replace($xmlStr, $htmlStr, $xmlString);
+	//$htmlString = convert_to_UTF8($htmlString);
 
 	//remove speaker info
 	$htmlString = preg_replace('/(<redner)(.|\n)*?(redner>)/', '', $htmlString);
